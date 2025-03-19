@@ -2,6 +2,7 @@ import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -14,14 +15,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Random;
 
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
+import core.Linha2D;
+import core.Ponto2D;
+
 public class MainCanvas extends JPanel implements Runnable{
-	int W = 640;
-	int H = 480;
+	int W = 800;
+	int H = 600;
 	
 	Thread runner;
 	boolean ativo = true;
@@ -63,6 +68,10 @@ public class MainCanvas extends JPanel implements Runnable{
 	float filtroG = 1;
 	float filtroB = 1;
 	
+	Ponto2D p1linhadesenhando = null;
+	
+	ArrayList<Linha2D> listaDeLinhas = new ArrayList<>();
+	
 	public MainCanvas() {
 		
 		File f = new File("imgbmp.bmp");
@@ -91,103 +100,18 @@ public class MainCanvas extends JPanel implements Runnable{
 		
 		pixelSize = 640*480;
 		
-		
-//		try {
-//			imgtmp = ImageIO.read(getClass().getResource("fundo.jpg"));
-//			System.out.println(""+imgtmp.toString());
-//		} catch (IOException e1) {
-//			e1.printStackTrace();
-//		}
+	
 		
 		imgtmp = loadImage("fundo.jpg");
 		
 		imageBuffer = new BufferedImage(640,480, BufferedImage.TYPE_4BYTE_ABGR);
-		//imageBuffer.getGraphics().drawImage(imgtmp, 0, 0, null);
-		
+
 		
 		bufferDeVideo = ((DataBufferByte)imageBuffer.getRaster().getDataBuffer()).getData();
 		
 		System.out.println("Buffer SIZE "+bufferDeVideo.length );
 		
 		
-//		File f = new File("t1.bmp");
-//		try {
-//			DataInputStream din = new DataInputStream(new FileInputStream(f));
-//			byte b[] = new byte[128];
-//			int quant = 0;
-//			int cont = 0;
-//			while((quant = din.read(b))>=0) {
-//				for(int i = 0; i < quant;i++) {
-//					System.out.print(""+(b[i]&0xff)+" ");
-//				}
-//				System.out.println();
-//				cont++;
-//				if(cont==10) {
-//					break;
-//				}
-//			}
-//		} catch (IOException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		}
-		
-//		for(int i = 0; i < H;i++) {
-//			for(int j = 0; j < W;j++) {
-//				int pos = (i*W*4)+(j*4);
-//				
-//				int soma = bufferDeVideo[pos+1]&0xff;
-//				soma += bufferDeVideo[pos+2]&0xff;
-//				soma += bufferDeVideo[pos+3]&0xff;
-//				
-//				int media = soma/3;
-//				//System.out.println(""+media);
-//				
-//				bufferDeVideo[pos+1] = (byte)(Math.min((media*20)/100,255)&0x00ff);
-//				bufferDeVideo[pos+2] = (byte)(Math.min((media*60)/100,255)&0x00ff);
-//				bufferDeVideo[pos+3] = (byte)(Math.min((media*20)/100,255)&0x00ff);
-//			}
-//		}
-		
-		//memoriaPlacaVideo = new byte[W*H];
-		
-		
-		/*paleta = new short[255][3];
-		
-		for(int i = 0; i < 255;i++){
-			paleta[i][0] = (short)rand.nextInt(255);
-			paleta[i][1] = (short)rand.nextInt(255);
-			paleta[i][2] = (short)rand.nextInt(255);
-			
-		}*/
-		
-		//Seta Bugfeer com noise
-		/*for(int i = 0; i < bufferDeVideo.length;i+=4){
-			int r = rand.nextInt(255);
-			int g = rand.nextInt(255);
-			int b = rand.nextInt(255);
-			
-			bufferDeVideo[i] = (byte)0x00ff;
-			bufferDeVideo[i+1] = (byte)(0x00ff&b);
-			bufferDeVideo[i+2] = (byte)(0x00ff&g);
-			bufferDeVideo[i+3] = (byte)(0x00ff&r);
-		}8?
-		
-//		// 100,20 200,20
-//		for(int i = 0; i < 100;i++){
-//			int x = 100+i;
-//			int y = 20;
-//			int bt = x*4+y*640*4;
-//			bufferDeVideo[bt] = (byte)0x00ff;
-//			bufferDeVideo[bt+1] = (byte)0;
-//			bufferDeVideo[bt+2] = (byte)0;
-//			bufferDeVideo[bt+3] = (byte)0x00ff;
-//		}
-		
-		/*for(int y = 0; y < H;y++){
-			for(int x = 0; x < W;x++){
-				memoriaPlacaVideo[x+y*W] = (byte)((y%255)&0x00ff);
-			}
-		}*/
 		addKeyListener(new KeyListener() {
 			
 			@Override
@@ -245,7 +169,15 @@ public class MainCanvas extends JPanel implements Runnable{
 				clickX = e.getX();
 				clickY = e.getY();
 				
-				System.out.println("CLICO ");
+				System.out.println("CLICO "+clickX+" "+clickY);
+				if(p1linhadesenhando==null) {
+					p1linhadesenhando = new Ponto2D(clickX, clickY);
+				}else {
+					Ponto2D p2 = new Ponto2D(clickX, clickY);
+					Linha2D linha = new Linha2D(p1linhadesenhando,p2);
+					listaDeLinhas.add(linha);
+					p1linhadesenhando = null;
+				}
 			}
 			
 			@Override
@@ -299,15 +231,6 @@ public class MainCanvas extends JPanel implements Runnable{
 				int pixb = (yi+y)*W*4 + (xi+x)*4;
 				bufferDeVideo[pixb] = imgBuffer[pixi];
 				
-				//BW
-//				int soma = (imgBuffer[pixi+1]&0xff) + (imgBuffer[pixi+2]&0xff) + (imgBuffer[pixi+3]&0xff);
-//				int res = (int)(soma/3);
-//				
-//				bufferDeVideo[pixb+1] = (byte)(res&0xff);
-//				bufferDeVideo[pixb+2] = (byte)(res&0xff);
-//				bufferDeVideo[pixb+3] = (byte)(res&0xff);
-				
-				
 				int b = (imgBuffer[pixi+1]&0xff);
 				int g =	(imgBuffer[pixi+2]&0xff);
 				int r = (imgBuffer[pixi+3]&0xff);
@@ -329,53 +252,32 @@ public class MainCanvas extends JPanel implements Runnable{
 	@Override
 	public void paint(Graphics g) {
 		
-		for(int i = 0; i < bufferDeVideo.length; i++) {
-			bufferDeVideo[i] = 0;
-		}
-		
-		//drawImageToBuffer(imgtmp,(int)posx,(int)posy,filtroR,filtroG,filtroB);
-		
-		//desenhaLinhaHorizontal((int)posx-100,(int)posy,200);
-		
-		//desenhaLinhaVertical((int)posx,(int)posy-100,200);
-		
-		
-		
-		//desenhaLinhaVertical(300,200,200);
-		
-		// TODO Auto-generated method stub
-		//super.paint(g);
-		
-//		for(int i = 0; i < bufferDeVideo.length;i+=4){
-//			int rr = rand.nextInt(255);
-//			int gg = rand.nextInt(255);
-//			int bb = rand.nextInt(255);
-//			
-//			bufferDeVideo[i] = (byte)0x00ff;
-//			bufferDeVideo[i+1] = (byte)(0x00ff&bb);
-//			bufferDeVideo[i+2] = (byte)(0x00ff&gg);
-//			bufferDeVideo[i+3] = (byte)(0x00ff&rr);
+//		for(int i = 0; i < bufferDeVideo.length; i++) {
+//			bufferDeVideo[i] = 0;
 //		}
 		
-		/*for(int i = 0; i < memoriaPlacaVideo.length;i++){
-			int bufferindex = i*4;
-			bufferDeVideo[bufferindex] = (byte)0x00ff;
-			bufferDeVideo[bufferindex+1] = (byte)(paleta[memoriaPlacaVideo[i]&0x00ff][2]&0x00ff);
-			bufferDeVideo[bufferindex+2] = (byte)(paleta[memoriaPlacaVideo[i]&0x00ff][1]&0x00ff);
-			bufferDeVideo[bufferindex+3] = (byte)(paleta[memoriaPlacaVideo[i]&0x00ff][0]&0x00ff);
-		}*/
+
 		
 		g.setFont(f);
 		
 		g.setColor(Color.white);
-		g.fillRect(0, 0, 640, 480);
-//		g.setColor(Color.black);
-//		g.drawLine(0, 0, 640, 480);
+		g.fillRect(0, 0, 800, 600);
+		
+		g.setColor(Color.green);
+		g.drawRect(50, 50, 700, 500);
+		
+		g.setColor(Color.black);
+		for(int i = 0; i < listaDeLinhas.size();i++) {
+			listaDeLinhas.get(i).desenhase((Graphics2D)g);
+		}
+		
+		g.setColor(Color.red);
+		if(p1linhadesenhando!=null) {
+			g.drawLine((int)p1linhadesenhando.x, (int)p1linhadesenhando.y, mouseX, mouseY);
+		}
+
 		
 		g.drawImage(imageBuffer,0,0,null);
-		
-		//g.setColor(Color.BLUE);
-		//g.drawLine(clickX, clickY, mouseX, mouseY);
 		
 		g.setColor(Color.black);
 		g.drawString("FPS "+fps, 10, 25);
@@ -459,7 +361,7 @@ public class MainCanvas extends JPanel implements Runnable{
 		long diftime = 0;
 		while(ativo){
 			simulaMundo(diftime);
-			paintImmediately(0, 0, 640, 480);
+			paintImmediately(0, 0, 800, 600);
 			paintcounter+=100;
 			
 			try {
