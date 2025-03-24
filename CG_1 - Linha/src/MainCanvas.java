@@ -1,4 +1,5 @@
-import java.awt.Canvas;
+import core.Linha2D;
+import core.Ponto2D;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -10,19 +11,14 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
-
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
-
-import core.Linha2D;
-import core.Ponto2D;
 
 public class MainCanvas extends JPanel implements Runnable{
 	int W = 800;
@@ -162,22 +158,69 @@ public class MainCanvas extends JPanel implements Runnable{
 				// TODO Auto-generated method stub
 				
 			}
+
+			private boolean coordenadaValida(int x, int y) {
+				return x >= 50 && x <= 750 && y >= 50 && y <= 550;
+			}
 			
 			@Override
 			public void mousePressed(MouseEvent e) {
-				// TODO Auto-generated method stub
-				clickX = e.getX();
-				clickY = e.getY();
-				
-				System.out.println("CLICO "+clickX+" "+clickY);
-				if(p1linhadesenhando==null) {
-					p1linhadesenhando = new Ponto2D(clickX, clickY);
-				}else {
-					Ponto2D p2 = new Ponto2D(clickX, clickY);
-					Linha2D linha = new Linha2D(p1linhadesenhando,p2);
+				int x2 = e.getX();
+				int y2 = e.getY();
+			
+				System.out.println("CLICO " + x2 + " " + y2);
+			
+				if (p1linhadesenhando == null) {
+					p1linhadesenhando = new Ponto2D(x2, y2);
+				} else {
+					Ponto2D p2 = ajustarPontoParaLimites(p1linhadesenhando.x, p1linhadesenhando.y, x2, y2);
+					Linha2D linha = new Linha2D(p1linhadesenhando, p2);
 					listaDeLinhas.add(linha);
 					p1linhadesenhando = null;
 				}
+			}
+
+			private Ponto2D ajustarPontoParaLimites(float x1, float y1, float x2, float y2) {
+				int minX = 50, maxX = 750, minY = 50, maxY = 550;
+			
+				if (x2 >= minX && x2 <= maxX && y2 >= minY && y2 <= maxY) {
+					return new Ponto2D(x2, y2);
+				}
+			
+				float m = (y2 - y1) / (x2 - x1);
+				float b = y1 - m * x1;
+			
+				float xIntersect, yIntersect;
+			
+				// Interseção com a borda esquerda (x = 50)
+				if (x2 < minX) {
+					xIntersect = minX;
+					yIntersect = m * minX + b;
+					if (yIntersect >= minY && yIntersect <= maxY) return new Ponto2D(xIntersect, yIntersect);
+				}
+			
+				// Interseção com a borda direita (x = 750)
+				if (x2 > maxX) {
+					xIntersect = maxX;
+					yIntersect = m * maxX + b;
+					if (yIntersect >= minY && yIntersect <= maxY) return new Ponto2D(xIntersect, yIntersect);
+				}
+			
+				// Interseção com a borda superior (y = 50)
+				if (y2 < minY) {
+					yIntersect = minY;
+					xIntersect = (minY - b) / m;
+					if (xIntersect >= minX && xIntersect <= maxX) return new Ponto2D(xIntersect, yIntersect);
+				}
+			
+				// Interseção com a borda inferior (y = 550)
+				if (y2 > maxY) {
+					yIntersect = maxY;
+					xIntersect = (maxY - b) / m;
+					if (xIntersect >= minX && xIntersect <= maxX) return new Ponto2D(xIntersect, yIntersect);
+				}
+			
+				return new Ponto2D(x2, y2); // Se por algum motivo não encontrar, usa o original
 			}
 			
 			@Override
